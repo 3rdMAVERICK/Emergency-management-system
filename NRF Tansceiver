@@ -1,0 +1,36 @@
+//code to be uploaded in the receiver end
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 10); // CE, CSN Pins
+const uint64_t address = 0xF0F0F0F0E1LL;
+float array[2];
+void setup() 
+{
+  Serial.begin(9600);
+  radio.begin();
+  radio.openReadingPipe(1, address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.startListening();
+}
+void loop() 
+{
+  if (radio.available()) {
+    for(int i=0;i<2;i++)
+ {
+ radio.read(&array[i],array[i]);
+  Serial.println(array[i]);
+ 
+ }
+ radio.begin();
+  radio.openWritingPipe(address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.stopListening();
+  
+  const char sendData[] = "yes";
+  radio.write(&sendData, sizeof(sendData));
+  delay(500);
+  
+  }
+}
