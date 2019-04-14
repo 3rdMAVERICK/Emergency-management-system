@@ -1,0 +1,117 @@
+//code to be uploaded in arduino connected serially with nodemcu
+
+#include <TinyGPS.h>
+#include <SoftwareSerial.h>
+SoftwareSerial Gsm(7, 8);
+char phone_no[] = "8072218862"; //replace with phone no. to get sms
+
+
+#include <SPI.h> // for nrf 
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 10); // CE, CSN Pins
+const uint64_t address = 0xF0F0F0F0E1LL;
+float array[2];
+
+
+TinyGPS gps;  //Creates a new instance of the TinyGPS object
+int  n = 1; //input signal from airbag sensor
+void setup()
+{
+  Serial.begin(9600);
+  Gsm.begin(9600);
+
+}
+
+void loop()
+{
+  bool newData = false;
+  unsigned long chars;
+  unsigned short sentences, failed;
+
+  // For one second we parse GPS data and report some key values
+  for (unsigned long start = millis(); millis() - start < 1000;)
+  {
+    while (Serial.available())
+    {
+      char c = Serial.read();
+      Serial.print(c);
+      if (gps.encode(c))
+        newData = true;
+    }
+  }
+
+
+  if (newData)      //If newData is true
+  {
+    float flat, flon;
+    unsigned long age;
+    gps.f_get_position(&flat, &flon, &age);
+    if (Serial.available() > 0)
+    {
+      switch(n)
+      case 0: 'a';
+      nrfgsm();
+      
+    }
+  }
+}
+void nrfgsm()
+{
+  float flat, flon;
+  unsigned long age; 
+  gps.f_get_position(&flat, &flon, &age);  
+  
+  radio.begin();
+  radio.openWritingPipe(address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.stopListening();
+  
+  flat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat, 6;
+   flon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon, 6;
+   array[0]=flat;
+  array[1]=flon;
+ for(int i=0;i<2;i++)
+ {
+radio.write(&array[i],array[i]);
+ }
+delay(500);
+
+int recvData=0;
+  radio.begin();
+  radio.openReadingPipe(1, address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.startListening();
+  
+  if (radio.available()) {
+   char recvData[32] = "";
+    radio.read(&recvData, sizeof(recvData));
+    Serial.println(recvData);
+    
+   
+  if ( recvData == 0) {
+  
+   
+  
+      Gsm.print("AT+CMGF=1\r");
+      delay(400);
+      Gsm.print("AT+CMGS=\"");
+      Gsm.print(phone_no);
+      Gsm.println("\"");
+
+      delay(300);
+      Gsm.print("https://maps.google.com/maps?q=loc:");
+
+      Serial.print("Latitude = ");
+      Gsm.print(flat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat, 6);
+      Serial.print(" Longitude = ");
+      Serial.print(",");
+      Gsm.print(",");
+      Gsm.print(flon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon, 6);
+      delay(200);
+      Gsm.println((char)26); // End AT command with a ^Z, ASCII code 26
+      delay(200);
+      Gsm.println();
+      delay(20000);
+    }}
+}
